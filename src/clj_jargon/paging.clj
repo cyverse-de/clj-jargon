@@ -1,4 +1,5 @@
 (ns clj-jargon.paging
+  (:require [otel.otel :as otel])
   (:import [org.irods.jargon.core.pub.io FileIOOperations
                                          FileIOOperations$SeekWhenceType
                                          IRODSRandomAccessFile
@@ -18,8 +19,9 @@
 
 (defn read-at-position
   ([cm filepath position num-bytes]
-     (read-at-position cm filepath position num-bytes true))
+   (read-at-position cm filepath position num-bytes true))
   ([cm filepath position num-bytes stringify?]
+   (otel/with-span [s ["read-at-position" {:attributes {"path" filepath "offset" position "size" num-bytes "stringify?" stringify?}}]]
      (let [access-file (random-access-file cm filepath)
            file-size   (file-length-bytes cm filepath)
            array-size  (if (< file-size num-bytes) file-size num-bytes)
@@ -34,7 +36,7 @@
               _   (.close access-file)]
           (if stringify?
             (String. buffer 0 len)
-            buffer))))))
+            buffer)))))))
 
 (defn overwrite-at-position
   [cm filepath position update]
