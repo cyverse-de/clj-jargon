@@ -21,7 +21,7 @@
                                [org.slf4j/slf4j-log4j12]]]
                  [medley "1.3.0"]
                  [slingshot "0.12.2"]
-                 [org.cyverse/otel "0.2.0-SNAPSHOT"]
+                 [org.cyverse/otel "0.2.0"]
                  [org.cyverse/clojure-commons "2.8.1"]]
   :repositories [["cyverse-de"
                   {:url "https://raw.github.com/cyverse-de/mvn/master/releases"}]
