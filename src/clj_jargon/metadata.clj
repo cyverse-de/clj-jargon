@@ -92,8 +92,8 @@
 (defn attr-value?
   "Returns a truthy value if path has metadata that has an attribute of attr and
    a value of val."
-  ([cm path attr val]
-    (pos? (count (get-attribute-value cm path attr val))))
+  ([cm path attr val & {:keys [known-type] :or {known-type nil}}]
+    (pos? (count (get-attribute-value cm path attr val :known-type known-type))))
   ([metadata attr val]
     (-> (filter
           #(and (= (:attr %1) attr)
@@ -130,10 +130,10 @@
   (.deleteAVUMetadata ao-obj dir-path avu))
 
 (defn add-metadata
-  [cm dir-path attr value unit]
+  [cm dir-path attr value unit & {:keys [known-type] :or {known-type nil}}]
   (validate-path-lengths dir-path)
   (try+
-    (let [ao-obj (case (object-type cm dir-path)
+    (let [ao-obj (case (or known-type (object-type cm dir-path))
                      :dir  (:collectionAO cm)
                      :file (:dataObjectAO cm))]
       (add-avu ao-obj dir-path (AvuData/instance attr value unit)))
@@ -143,10 +143,10 @@
 
 (defn set-metadata
   "Sets an avu for dir-path."
-  [cm dir-path attr value unit]
+  [cm dir-path attr value unit & {:keys [known-type] :or {known-type nil}}]
   (validate-path-lengths dir-path)
   (let [avu    (AvuData/instance attr value unit)
-        ao-obj (case (object-type cm dir-path)
+        ao-obj (case (or known-type (object-type cm dir-path))
                  :dir  (:collectionAO cm)
                  :file (:dataObjectAO cm))]
     (if (zero? (count (get-attribute cm dir-path attr)))
@@ -155,11 +155,11 @@
         (modify-avu ao-obj dir-path old-avu avu)))))
 
 (defn- delete-meta
-  [cm dir-path attr-func]
+  [cm dir-path attr-func & {:keys [known-type] :or {known-type nil}}]
   (validate-path-lengths dir-path)
   (let [fattr  (first (attr-func))
         avu    (map2avu fattr)
-        ao-obj (case (object-type cm dir-path)
+        ao-obj (case (or known-type (object-type cm dir-path))
                    :dir  (:collectionAO cm)
                    :file (:dataObjectAO cm))]
     (delete-avu ao-obj dir-path avu)))
@@ -171,9 +171,9 @@
     (delete-meta cm dir-path #(get-attribute-value cm dir-path attr val))))
 
 (defn delete-avus
-  [cm dir-path avu-maps]
+  [cm dir-path avu-maps & {:keys [known-type] :or {known-type nil}}]
   (validate-path-lengths dir-path)
-  (let [ao (case (object-type cm dir-path)
+  (let [ao (case (or known-type (object-type cm dir-path))
                    :dir  (:collectionAO cm)
                    :file (:dataObjectAO cm))]
     (doseq [avu-map avu-maps]

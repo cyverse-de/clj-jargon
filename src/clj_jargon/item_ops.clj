@@ -161,10 +161,11 @@
     (validate-path-lengths dest-path)
     (let [^Closeable ostream (output-stream cm dest-path)]
       (try
-        (io/copy istream ostream)
+        (otel/with-span [s ["io/copy"]] (io/copy istream ostream))
         (finally
-          (.close istream)
-          (.close ostream)
+          (otel/with-span [s ["close streams"]]
+            (.close istream)
+            (.close ostream))
           (when set-owner?
             (set-owner cm dest-path user :known-type :file))))
       (info/stat cm dest-path))))
