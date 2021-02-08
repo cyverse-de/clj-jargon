@@ -80,7 +80,9 @@
      uuids - a vector of UUIDs
 
    Returns: A map from UUID to the path of the associated entity. UUIDs that could not be found will be missing from the
-   resulting map."
+   resulting map. Note: this function will not detect the case where the same UUID is associated with multiple entities
+   in the data store. If the same UUID ever becomes associated with multiple entities, whichever entity is found last
+   will be included in the results."
   [{^IRODSGenQueryExecutor executor :executor} ^IPersistentVector uuids]
   (let [partitions (partition-all 500 uuids)
         get-values (fn [^IRODSQueryResultRow row] (.getColumnsAsList row))
