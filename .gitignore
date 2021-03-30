@@ -17,3 +17,5 @@ bin
 *.iml
 build.xml
 test2junit
+.nrepl-port
+.eastwood

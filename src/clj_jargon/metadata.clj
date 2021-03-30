@@ -20,6 +20,8 @@
                                         AVUQueryOperatorEnum
                                         MetaDataAndDomainData]))
 
+(def max-gen-query-results 50000)
+
 (defn map2avu
   "Converts an avu map into an AvuData instance."
   [avu-map]
@@ -212,7 +214,7 @@
       (.addConditionAsGenQueryField RodsGenQueryEnum/COL_META_DATA_ATTR_VALUE
                                     (op->constant op)
                                     (str value))
-      (.exportIRODSQueryFromBuilder 50000)))
+      (.exportIRODSQueryFromBuilder max-gen-query-results)))
 
 (defn- build-file-attr-query
   [^String name]
@@ -221,7 +223,7 @@
       (.addSelectAsGenQueryValue RodsGenQueryEnum/COL_DATA_NAME)
       (.addConditionAsGenQueryField RodsGenQueryEnum/COL_META_DATA_ATTR_NAME
                                     QueryConditionOperators/EQUAL name)
-      (.exportIRODSQueryFromBuilder 50000)))
+      (.exportIRODSQueryFromBuilder max-gen-query-results)))
 
 
 (defn- format-result
@@ -299,7 +301,7 @@
                                     QueryConditionOperators/LIKE
                                     (str path \%)))
     (add-conditions-from-avu-spec condition-columns builder avu-spec)
-    (.exportIRODSQueryFromBuilder builder 50000)))
+    (.exportIRODSQueryFromBuilder builder max-gen-query-results)))
 
 (defn- list-items-in-tree-with-attr
   "Lists either files or directories in a subtree given the path to the root of the subtree and an
