@@ -24,6 +24,7 @@
                  [slingshot "0.12.2"]
                  [org.cyverse/otel "0.2.0"]
                  [org.cyverse/clojure-commons "2.8.1"]]
+  :profiles {:repl {:source-paths ["repl"]}}
   :eastwood {:exclude-linters [:unlimited-use]}
   :repositories [["cyverse-de"
                   {:url "https://raw.github.com/cyverse-de/mvn/master/releases"}]
