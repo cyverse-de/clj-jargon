@@ -3,9 +3,9 @@
 ## Testing from the REPL
 
 This library is configured to add the path `./repl` to the source file search path in REPL mode, so that developers can
-easily test using the Clojure REPL. To use this feature, first create two files, `$HOME/.irods/.qa-jargon.json` for QA
-and `$HOME/.irods/.prod-jargon.json` for production). Note that these files will contain sensitive conneciton
-information for iRODS. Be sure to set the file permissions accordingly. Each file should look like this:
+easily test using the Clojure REPL. To use this feature, first create two files: `$HOME/.irods/.qa-jargon.json` for QA,
+and `$HOME/.irods/.prod-jargon.json` for production. Note that these files will contain sensitive connection information
+for iRODS. Be sure to set the file permissions accordingly. Each file should look like this:
 
 ``` json
 {
