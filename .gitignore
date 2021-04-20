@@ -9,6 +9,7 @@ bin
 .project
 .lein*
 \#*\#
+/repl/
 /target/
 .DS_Store
 .dir-locals.el
