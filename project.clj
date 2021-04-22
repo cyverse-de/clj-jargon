@@ -1,4 +1,4 @@
-(defproject org.cyverse/clj-jargon "2.8.15-SNAPSHOT"
+(defproject org.cyverse/clj-jargon "3.0.0-SNAPSHOT"
   :description "Clojure API on top of iRODS's jargon-core."
   :url "https://github.com/cyverse-de/clj-jargon"
   :license {:name "BSD"
@@ -10,14 +10,14 @@
   :dependencies [[org.clojure/clojure "1.10.3"]
                  [org.clojure/tools.logging "1.1.0"]
                  [ch.qos.logback/logback-classic "1.2.3"]
-                 [org.irods.jargon/jargon-core "4.0.2.6-RELEASE"
+                 [org.irods.jargon/jargon-core "4.2.2.1-RELEASE"
                   :exclusions [[org.jglobus/JGlobus-Core]
                                [org.slf4j/slf4j-api]
                                [org.slf4j/slf4j-log4j12]]]
-                 [org.irods.jargon/jargon-data-utils "4.0.2.6-RELEASE"
+                 [org.irods.jargon/jargon-data-utils "4.2.2.1-RELEASE"
                   :exclusions [[org.slf4j/slf4j-api]
                                [org.slf4j/slf4j-log4j12]]]
-                 [org.irods.jargon/jargon-ticket "4.0.2.6-RELEASE"
+                 [org.irods.jargon/jargon-ticket "4.2.2.1-RELEASE"
                   :exclusions [[org.slf4j/slf4j-api]
                                [org.slf4j/slf4j-log4j12]]]
                  [cheshire "5.10.0"]
