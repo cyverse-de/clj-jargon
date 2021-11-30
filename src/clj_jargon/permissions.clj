@@ -411,8 +411,8 @@
       path - The path being checked."
   [{^CollectionAO collection-ao :collectionAO :as cm} path]
   (validate-path-lengths path)
-  (when (item/is-dir? cm path)
-    (.isCollectionSetForPermissionInheritance collection-ao path)))
+  (boolean (when (item/is-dir? cm path)
+    (.isCollectionSetForPermissionInheritance collection-ao path))))
 
 (defn ^Boolean is-writeable?
   "Returns true if 'user' can write to 'path'.
@@ -426,8 +426,8 @@
   (if-not (user-exists? cm user)
     false
     (case (or known-type (item/object-type cm path))
-      :dir  (collection-writeable? cm user (ft/rm-last-slash path))
-      :file (dataobject-writeable? cm user (ft/rm-last-slash path))
+      :dir  (boolean (collection-writeable? cm user (ft/rm-last-slash path)))
+      :file (boolean (dataobject-writeable? cm user (ft/rm-last-slash path)))
       false)))
 
 (defn ^Boolean is-readable?
@@ -442,8 +442,8 @@
   (if-not (user-exists? cm user)
     false
     (case (or known-type (item/object-type cm path))
-      :dir  (collection-readable? cm user (ft/rm-last-slash path))
-      :file (dataobject-readable? cm user (ft/rm-last-slash path))
+      :dir  (boolean (collection-readable? cm user (ft/rm-last-slash path)))
+      :file (boolean (dataobject-readable? cm user (ft/rm-last-slash path)))
       false)))
 
 (defn ^Boolean paths-writeable?
@@ -624,8 +624,8 @@
   [cm user fpath & {:keys [known-type] :or {known-type nil}}]
   (validate-path-lengths fpath)
   (case (or known-type (item/object-type cm fpath))
-    :file (owns-dataobject? cm user fpath)
-    :dir  (owns-collection? cm user fpath)
+    :file (boolean (owns-dataobject? cm user fpath))
+    :dir  (boolean (owns-collection? cm user fpath))
     false))
 
 (defn removed-owners
