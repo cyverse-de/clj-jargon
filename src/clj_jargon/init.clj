@@ -158,7 +158,10 @@
   "Creates a context map or a delay for one, depending whether lazy? is true"
   [cfg client-user lazy?]
   (if lazy?
-    (delay (create-jargon-context-map cfg client-user))
+    (let [s (otel/current-span)]
+      (delay
+        (with-open [_ (otel/span-scope s)]
+          (create-jargon-context-map cfg client-user))))
     (create-jargon-context-map cfg client-user)))
 
 
