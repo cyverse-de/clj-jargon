@@ -26,9 +26,10 @@
 
 (defn mkdir
   [{^IRODSFileSystemAO cm-ao :fileSystemAO :as cm} ^String dir-path]
-  (validate-full-dirpath dir-path)
-  (validate-path-lengths dir-path)
-  (.mkdir cm-ao (info/file cm dir-path) false))
+  (otel/with-span [s ["mkdir" {:attributes {"irods.path" dir-path}}]]
+    (validate-full-dirpath dir-path)
+    (validate-path-lengths dir-path)
+    (.mkdir cm-ao (info/file cm dir-path) false)))
 
 
 ;; bad Exit conditions:  parent Is file, or reaches zone level
@@ -46,30 +47,32 @@
 
 (defn mkdirs
   [{^IRODSFileSystemAO cm-ao :fileSystemAO :as cm} dir-path]
-  (validate-full-dirpath dir-path)
-  (validate-path-lengths dir-path)
+  (otel/with-span [s ["mkdirs" {:attributes {"irods.path" dir-path}}]]
+    (validate-full-dirpath dir-path)
+    (validate-path-lengths dir-path)
 
-  ; iRODS always returns success even when it fails to create a directory recursively.
-  #_(.mkdir cm-ao (file cm dir-path) true)
+    ; iRODS always returns success even when it fails to create a directory recursively.
+    #_(.mkdir cm-ao (file cm dir-path) true)
 
-  ; Here is a work around until this bug is fixed in iRODS.
-  (mkdirs-unvalidated cm dir-path))
+    ; Here is a work around until this bug is fixed in iRODS.
+    (mkdirs-unvalidated cm dir-path)))
 
 
 (defn delete
   ([cm a-path]
    (delete cm a-path false))
   ([cm a-path force?]
-   (validate-path-lengths a-path)
-   (let [^IRODSFileSystemAO fileSystemAO (:fileSystemAO cm)
-                            resource     (info/file cm a-path)]
-     (if (and (:use-trash cm) (false? force?))
-       (if (info/is-dir? cm a-path)
-         (.directoryDeleteNoForce fileSystemAO resource)
-         (.fileDeleteNoForce fileSystemAO resource))
-       (if (info/is-dir? cm a-path)
-         (.directoryDeleteForce fileSystemAO resource)
-         (.fileDeleteForce fileSystemAO resource))))))
+   (otel/with-span [s ["delete" {:attributes {"irods.path" a-path}}]]
+     (validate-path-lengths a-path)
+     (let [^IRODSFileSystemAO fileSystemAO (:fileSystemAO cm)
+                              resource     (info/file cm a-path)]
+       (if (and (:use-trash cm) (false? force?))
+         (if (info/is-dir? cm a-path)
+           (.directoryDeleteNoForce fileSystemAO resource)
+           (.fileDeleteNoForce fileSystemAO resource))
+         (if (info/is-dir? cm a-path)
+           (.directoryDeleteForce fileSystemAO resource)
+           (.fileDeleteForce fileSystemAO resource)))))))
 
 (defn move
   "Moves a file/dir from source path 'source' into destination directory 'dest'.
@@ -87,39 +90,42 @@
                      :or   {admin-users #{}
                             skip-source-perms? false
                             update-fn (fn [_ _])}}]
-  (update-fn source :begin)
-  (validate-path-lengths source)
-  (validate-path-lengths dest)
-  (update-fn source :validated-path-lengths)
-  (let [^IRODSFileSystemAO fileSystemAO (:fileSystemAO cm)
-                           src          (info/file cm source)
-                           dst          (info/file cm dest)]
-    (if (info/is-file? cm source)
-      (.renameFile fileSystemAO src dst)
-      (.renameDirectory fileSystemAO src dst))
-    (update-fn source :did-rename)
-    (fix-perms cm src dst user admin-users skip-source-perms?)
-    (update-fn source :end)))
+  (otel/with-span [s ["move" {:attributes {"irods.source-path" source
+                                           "irods.destination-path" dest}}]]
+    (update-fn source :begin)
+    (validate-path-lengths source)
+    (validate-path-lengths dest)
+    (update-fn source :validated-path-lengths)
+    (let [^IRODSFileSystemAO fileSystemAO (:fileSystemAO cm)
+                             src          (info/file cm source)
+                             dst          (info/file cm dest)]
+      (if (info/is-file? cm source)
+        (.renameFile fileSystemAO src dst)
+        (.renameDirectory fileSystemAO src dst))
+      (update-fn source :did-rename)
+      (fix-perms cm src dst user admin-users skip-source-perms?)
+      (update-fn source :end))))
 
 (defn move-all
   [cm sources dest & {:keys [admin-users user update-fn]
                       :or {admin-users #{}
                            update-fn (fn [_ _])}}]
-  (update-fn "several paths" :begin)
-  (doseq [s sources] (validate-path-lengths (ft/path-join dest (ft/basename s))))
-  (update-fn "several paths" :validated-path-lengths)
-  (dorun
-   (map
-    #(move cm %1 (ft/path-join dest (ft/basename %1)) :user user :admin-users admin-users :update-fn update-fn)
-    sources))
-  (update-fn "several paths" :end))
+  (otel/with-span [s ["move-all" {:attributes {"irods.destination-path" dest}}]]
+    (update-fn "several paths" :begin)
+    (doseq [s sources] (validate-path-lengths (ft/path-join dest (ft/basename s))))
+    (update-fn "several paths" :validated-path-lengths)
+    (dorun
+     (map
+      #(move cm %1 (ft/path-join dest (ft/basename %1)) :user user :admin-users admin-users :update-fn update-fn)
+      sources))
+    (update-fn "several paths" :end)))
 
 
 (defn output-stream
   "Returns an FileOutputStream for a file in iRODS pointed to by 'output-path'. If the file exists,
    it will be truncated."
   [{^IRODSFileFactory file-factory :fileFactory :as cm} output-path]
-  (otel/with-span [s ["output-stream"]]
+  (otel/with-span [s ["output-stream" {:attributes {"irods.path" output-path}}]]
     (PackingIrodsOutputStream.
      (.instanceIRODSFileOutputStream file-factory
                                      (info/file cm output-path)
@@ -129,7 +135,7 @@
 (defn ^IRODSFileInputStream input-stream
   "Returns a FileInputStream for a file in iRODS pointed to by 'input-path'"
   [{^IRODSFileFactory file-factory :fileFactory :as cm} input-path]
-  (otel/with-span [s ["input-stream"]]
+  (otel/with-span [s ["input-stream" {:attributes {"irods.path" input-path}}]]
     (validate-path-lengths input-path)
     (PackingIrodsInputStream.
      (.instanceIRODSFileInputStream file-factory (info/file cm input-path)))))
@@ -138,7 +144,8 @@
 (defn read-file
   [{^IRODSFileFactory file-factory :fileFactory :as cm} fpath buffer]
   (validate-path-lengths fpath)
-  (.read (IRODSFileReader. (info/file cm fpath) file-factory) buffer))
+  (otel/with-span [s ["read-file" {:attributes {"irods.path" fpath}}]]
+    (.read (IRODSFileReader. (info/file cm fpath) file-factory) buffer)))
 
 
 (defn ^DataTransferOperations data-transfer-obj
@@ -157,7 +164,7 @@
 
 (defn copy-stream
   [cm ^Closeable istream user dest-path & {:keys [set-owner?] :or {set-owner? true}}]
-  (otel/with-span [s ["copy-stream"]]
+  (otel/with-span [s ["copy-stream" {:attributes {"irods.path" dest-path}}]]
     (validate-path-lengths dest-path)
     (let [^Closeable ostream (output-stream cm dest-path)]
       (try

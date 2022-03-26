@@ -53,8 +53,9 @@
 
     Returns: true if the path exists in iRODS and false otherwise."
   [cm ^String path]
-  (validate-path-lengths path)
-  (.exists (file cm path)))
+  (otel/with-span [s ["exists?" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (.exists (file cm path))))
 
 (defn ^Boolean paths-exist?
   "Returns true if the paths exist in iRODS.
@@ -69,7 +70,7 @@
 
 (defn object-type
   [{^IRODSFileSystemAO cm-ao :fileSystemAO} ^String path]
-  (otel/with-span [s ["object-type"]]
+  (otel/with-span [s ["object-type" {:attributes {"irods.path" path}}]]
     (try
       (condp = (.getObjectType (.getObjStat cm-ao path))
         collection-type :dir
@@ -84,14 +85,16 @@
 (defn ^Boolean is-file?
   "Returns true if the path is a file in iRODS, false otherwise."
   [cm ^String path]
-  (validate-path-lengths path)
-  (jargon-type-check cm :file path))
+  (otel/with-span [s ["is-file?" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (jargon-type-check cm :file path)))
 
 (defn ^Boolean is-dir?
   "Returns true if the path is a directory in iRODS, false otherwise."
   [cm ^String path]
-  (validate-path-lengths path)
-  (jargon-type-check cm :dir path))
+  (otel/with-span [s ["is-dir?" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (jargon-type-check cm :dir path)))
 
 (defn ^Boolean is-linked-dir?
   "Indicates whether or not a directory (collection) is actually a link to a
@@ -105,48 +108,54 @@
      It returns true if the path points to a linked directory, otherwise it
      returns false."
   [{^IRODSFileFactory file-factory :fileFactory} ^String path]
-  (validate-path-lengths path)
-  (= ObjStat$SpecColType/LINKED_COLL
-     (.. file-factory
-       (instanceIRODSFile (ft/rm-last-slash path))
-       initializeObjStatForFile
-       getSpecColType)))
+  (otel/with-span [s ["is-linked-dir?" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (= ObjStat$SpecColType/LINKED_COLL
+       (.. file-factory
+         (instanceIRODSFile (ft/rm-last-slash path))
+         initializeObjStatForFile
+         getSpecColType))))
 
 (defn ^DataObject data-object
   "Returns an instance of DataObject representing 'path'."
   [{^DataObjectAO data-ao :dataObjectAO} ^String path]
-  (validate-path-lengths path)
-  (.findByAbsolutePath data-ao path))
+  (otel/with-span [s ["data-object" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (.findByAbsolutePath data-ao path)))
 
 (defn ^Collection collection
   "Returns an instance of Collection (the Jargon version) representing
     a directory in iRODS."
   [{^CollectionAO collection-ao :collectionAO} ^String path]
-  (validate-path-lengths path)
-  (.findByAbsolutePath collection-ao (ft/rm-last-slash path)))
+  (otel/with-span [s ["collection" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (.findByAbsolutePath collection-ao (ft/rm-last-slash path))))
 
 (defn lastmod-date
   "Returns the date that the file/directory was last modified."
   [{^IRODSFileSystemAO cm-ao :fileSystemAO} ^String path]
-  (validate-path-lengths path)
-  (str (long (.getTime (.getModifiedAt (.getObjStat cm-ao path))))))
+  (otel/with-span [s ["lastmod-date" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (str (long (.getTime (.getModifiedAt (.getObjStat cm-ao path)))))))
 
 (defn created-date
   "Returns the date that the file/directory was created."
   [{^IRODSFileSystemAO cm-ao :fileSystemAO} ^String path]
-  (validate-path-lengths path)
-  (str (long (.getTime (.getCreatedAt (.getObjStat cm-ao path))))))
+  (otel/with-span [s ["created-date" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (str (long (.getTime (.getCreatedAt (.getObjStat cm-ao path)))))))
 
 (defn file-size
   "Returns the size of the file in bytes."
   [{^IRODSFileSystemAO cm-ao :fileSystemAO} ^String path]
-  (validate-path-lengths path)
-  (.getObjSize (.getObjStat cm-ao path)))
+  (otel/with-span [s ["file-size" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
+    (.getObjSize (.getObjStat cm-ao path))))
 
 (defn stat
   "Returns status information for a path."
   [{^IRODSFileSystemAO cm-ao :fileSystemAO} ^String path]
-  (otel/with-span [s ["stat"]]
+  (otel/with-span [s ["stat" {:attributes {"irods.path" path}}]]
     (validate-path-lengths path)
     (try
       (let [objstat (.getObjStat cm-ao path)]

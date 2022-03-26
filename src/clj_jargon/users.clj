@@ -11,7 +11,7 @@
 
 (defn user
   [{^UserAO user-ao :userAO} username]
-  (otel/with-span [s ["user" {:attributes {"user" username}}]]
+  (otel/with-span [s ["user" {:attributes {"irods.user" username}}]]
     (try
       (let [jargon-user (.findByName user-ao username)]
         {:id (.getId jargon-user)
@@ -26,26 +26,26 @@
 
 (defn username->id
   [cm username]
-  (otel/with-span [s ["username->id" {:attributes {"user" username}}]]
+  (otel/with-span [s ["username->id" {:attributes {"irods.user" username}}]]
     (:id (user cm username))))
 
 (defn user-exists?
   "Returns true if 'username' exists in iRODS."
   [cm username]
-  (otel/with-span [s ["user-exists?" {:attributes {"user" username}}]]
+  (otel/with-span [s ["user-exists?" {:attributes {"irods.user" username}}]]
     (not (= :none (:type (user cm username))))))
 
 (defn user-groups
   "Returns a list of group names that the user is in."
   [{^UserGroupAO ug-ao :userGroupAO} username]
-  (otel/with-span [s ["user-groups" {:attributes {"user" username}}]]
+  (otel/with-span [s ["user-groups" {:attributes {"irods.user" username}}]]
     (for [^UserGroup ug (.findUserGroupsForUser ug-ao username)]
       (.getUserGroupName ug))))
 
 (defn user-group-ids
   "Returns a list of group IDs that the user is in."
   [{^UserGroupAO ug-ao :userGroupAO} username]
-  (otel/with-span [s ["user-group-ids" {:attributes {"user" username}}]]
+  (otel/with-span [s ["user-group-ids" {:attributes {"irods.user" username}}]]
     (for [^UserGroup ug (.findUserGroupsForUser ug-ao username)]
       (.getUserGroupId ug))))
 

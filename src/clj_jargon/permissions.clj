@@ -73,8 +73,8 @@
 
 (defn collection-perms-rs
   [cm user coll-path]
-  (otel/with-span [s ["collection-perms-rs" {:attributes {"user" user
-                                                          "path" coll-path}}]]
+  (otel/with-span [s ["collection-perms-rs" {:attributes {"irods.user" user
+                                                          "irods.path" coll-path}}]]
     (execute-gen-query cm
      "select %s where %s = '%s' and %s = '%s'"
      [RodsGenQueryEnum/COL_COLL_ACCESS_TYPE
@@ -85,8 +85,8 @@
 
 (defn dataobject-perms-rs
   [cm user-id data-path]
-  (otel/with-span [s ["dataobject-perms-rs" {:attributes {"user-id" user-id
-                                                          "path"    data-path}}]]
+  (otel/with-span [s ["dataobject-perms-rs" {:attributes {"irods.user-id" user-id
+                                                          "irods.path"    data-path}}]]
     (execute-gen-query cm
      "select %s where %s = '%s' and %s = '%s' and %s = '%s'"
      [RodsGenQueryEnum/COL_DATA_ACCESS_TYPE
@@ -111,7 +111,8 @@
 
 (defn- user-collection-perms*
   [cm user coll-path escape-hatch]
-  (otel/with-span [s ["user-collection-perms*"]]
+  (otel/with-span [s ["user-collection-perms*" {:attributes {"irods.path" coll-path
+                                                             "irods.user" user}}]]
     (validate-path-lengths coll-path)
     (->> (concat [user] (lazy-seq (user-groups cm user)))
          (mcat #(collection-perms-rs cm % coll-path))
@@ -127,7 +128,8 @@
 
 (defn- user-dataobject-perms*
   [cm user data-path escape-hatch]
-  (otel/with-span [s ["user-dataobject-perms*"]]
+  (otel/with-span [s ["user-dataobject-perms*" {:attributes {"irods.path" data-path
+                                                             "irods.user" user}}]]
     (validate-path-lengths data-path)
     (->> (concat [(username->id cm user)] (lazy-seq (user-group-ids cm user)))
          (mcat #(dataobject-perms-rs cm % data-path))
@@ -374,7 +376,7 @@
     ^CollectionAO collection-ao :collectionAO
     zone :zone
     :as cm} path owner & {:keys [known-type] :or {known-type nil}}]
-  (otel/with-span [s ["set-owner"]]
+  (otel/with-span [s ["set-owner" {:attributes {"irods.path" path}}]]
     (validate-path-lengths path)
     (case (or known-type (item/object-type cm path))
      :file (.setAccessPermissionOwn data-ao zone path owner)

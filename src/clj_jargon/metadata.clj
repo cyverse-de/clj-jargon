@@ -38,19 +38,19 @@
   [{^DataObjectAO data-ao :dataObjectAO
     ^CollectionAO collection-ao :collectionAO
     :as cm}
-   ^String dir-path & {:keys [known-type] :or {known-type nil}}]
-  (otel/with-span [s ["get-metadata"]]
-    (validate-path-lengths dir-path)
+   ^String path & {:keys [known-type] :or {known-type nil}}]
+  (otel/with-span [s ["get-metadata" {:attributes {"irods.path" path}}]]
+    (validate-path-lengths path)
     (mapv avu2map
-      (case (or known-type (object-type cm dir-path))
-        :dir  (.findMetadataValuesForCollection collection-ao dir-path)
-        :file (.findMetadataValuesForDataObject data-ao dir-path)))))
+      (case (or known-type (object-type cm path))
+        :dir  (.findMetadataValuesForCollection collection-ao path)
+        :file (.findMetadataValuesForDataObject data-ao path)))))
 
 (defn- get-metadata-by-query
   [{^DataObjectAO data-ao :dataObjectAO
     ^CollectionAO collection-ao :collectionAO
     :as cm} path query & {:keys [known-type] :or {known-type nil}}]
-  (otel/with-span [s ["get-metadata-by-query"]]
+  (otel/with-span [s ["get-metadata-by-query" {:attributes {"irods.path" path}}]]
     (validate-path-lengths path)
     (mapv avu2map
       (case (or known-type (object-type cm path))
@@ -62,8 +62,8 @@
   [{^DataObjectAO data-ao :dataObjectAO
     ^CollectionAO collection-ao :collectionAO
     :as cm} dir-path attr & {:keys [known-type] :or {known-type nil}}]
-  (otel/with-span [s ["get-attribute" {:attributes {"path"      dir-path
-                                                    "attribute" attr}}]]
+  (otel/with-span [s ["get-attribute" {:attributes {"irods.path"      dir-path
+                                                    "irods.attribute" attr}}]]
     (let [query [(AVUQueryElement/instanceForValueQuery
                   AVUQueryElement$AVUQueryPart/ATTRIBUTE
                   AVUQueryOperatorEnum/EQUAL
@@ -74,9 +74,9 @@
   [{^DataObjectAO data-ao :dataObjectAO
     ^CollectionAO collection-ao :collectionAO
     :as cm} apath attr val & {:keys [known-type] :or {known-type nil}}]
-  (otel/with-span [s ["get-attribute-value" {:attributes {"path"      apath
-                                                          "attribute" attr
-                                                          "value"     (str val)}}]]
+  (otel/with-span [s ["get-attribute-value" {:attributes {"irods.path"      apath
+                                                          "irods.attribute" attr
+                                                          "irods.value"     (str val)}}]]
     (let [query [(AVUQueryElement/instanceForValueQuery
                   AVUQueryElement$AVUQueryPart/ATTRIBUTE
                   AVUQueryOperatorEnum/EQUAL
@@ -108,53 +108,61 @@
           (fn [ao-obj dir-path avu] (type ao-obj)))
 (defmethod add-avu CollectionAO
   [^CollectionAO ao-obj ^String dir-path ^AvuData avu]
-  (.addAVUMetadata ao-obj dir-path avu))
+  (otel/with-span [s ["add-avu" {:attributes {"irods.path" dir-path}}]]
+    (.addAVUMetadata ao-obj dir-path avu)))
 (defmethod add-avu DataObjectAO
   [^DataObjectAO ao-obj ^String dir-path ^AvuData avu]
-  (.addAVUMetadata ao-obj dir-path avu))
+  (otel/with-span [s ["add-avu" {:attributes {"irods.path" dir-path}}]]
+    (.addAVUMetadata ao-obj dir-path avu)))
 
 (defmulti modify-avu
           (fn [ao-obj dir-path old-avu avu] (type ao-obj)))
 (defmethod modify-avu CollectionAO
   [^CollectionAO ao-obj ^String dir-path ^AvuData old-avu ^AvuData avu]
-  (.modifyAVUMetadata ao-obj dir-path old-avu avu))
+  (otel/with-span [s ["modify-avu" {:attributes {"irods.path" dir-path}}]]
+    (.modifyAVUMetadata ao-obj dir-path old-avu avu)))
 (defmethod modify-avu DataObjectAO
   [^DataObjectAO ao-obj ^String dir-path ^AvuData old-avu ^AvuData avu]
-  (.modifyAVUMetadata ao-obj dir-path old-avu avu))
+  (otel/with-span [s ["modify-avu" {:attributes {"irods.path" dir-path}}]]
+    (.modifyAVUMetadata ao-obj dir-path old-avu avu)))
 
 (defmulti delete-avu
           (fn [ao-obj dir-path avu] (type ao-obj)))
 (defmethod delete-avu CollectionAO
   [^CollectionAO ao-obj ^String dir-path ^AvuData avu]
-  (.deleteAVUMetadata ao-obj dir-path avu))
+  (otel/with-span [s ["delete-avu" {:attributes {"irods.path" dir-path}}]]
+    (.deleteAVUMetadata ao-obj dir-path avu)))
 (defmethod delete-avu DataObjectAO
   [^DataObjectAO ao-obj ^String dir-path ^AvuData avu]
-  (.deleteAVUMetadata ao-obj dir-path avu))
+  (otel/with-span [s ["delete-avu" {:attributes {"irods.path" dir-path}}]]
+    (.deleteAVUMetadata ao-obj dir-path avu)))
 
 (defn add-metadata
   [cm dir-path attr value unit & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths dir-path)
-  (try+
-    (let [ao-obj (case (or known-type (object-type cm dir-path))
-                     :dir  (:collectionAO cm)
-                     :file (:dataObjectAO cm))]
-      (add-avu ao-obj dir-path (AvuData/instance attr value unit)))
-    (catch CatNoAccessException _
-      (throw+ {:error_code ERR_NOT_WRITEABLE :path dir-path}))))
+  (otel/with-span [s ["add-metadata" {:attributes {"irods.path" dir-path}}]]
+    (validate-path-lengths dir-path)
+    (try+
+      (let [ao-obj (case (or known-type (object-type cm dir-path))
+                       :dir  (:collectionAO cm)
+                       :file (:dataObjectAO cm))]
+        (add-avu ao-obj dir-path (AvuData/instance attr value unit)))
+      (catch CatNoAccessException _
+        (throw+ {:error_code ERR_NOT_WRITEABLE :path dir-path})))))
 
 
 (defn set-metadata
   "Sets an avu for dir-path."
   [cm dir-path attr value unit & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths dir-path)
-  (let [avu    (AvuData/instance attr value unit)
-        ao-obj (case (or known-type (object-type cm dir-path))
-                 :dir  (:collectionAO cm)
-                 :file (:dataObjectAO cm))]
-    (if (zero? (count (get-attribute cm dir-path attr)))
-      (add-avu ao-obj dir-path avu)
-      (let [old-avu (map2avu (first (get-attribute cm dir-path attr)))]
-        (modify-avu ao-obj dir-path old-avu avu)))))
+  (otel/with-span [s ["set-metadata" {:attributes {"irods.path" dir-path}}]]
+    (validate-path-lengths dir-path)
+    (let [avu    (AvuData/instance attr value unit)
+          ao-obj (case (or known-type (object-type cm dir-path))
+                   :dir  (:collectionAO cm)
+                   :file (:dataObjectAO cm))]
+      (if (zero? (count (get-attribute cm dir-path attr)))
+        (add-avu ao-obj dir-path avu)
+        (let [old-avu (map2avu (first (get-attribute cm dir-path attr)))]
+          (modify-avu ao-obj dir-path old-avu avu))))))
 
 (defn- delete-meta
   [cm dir-path attr-func & {:keys [known-type] :or {known-type nil}}]
@@ -168,19 +176,22 @@
 
 (defn delete-metadata
   ([cm dir-path attr]
-    (delete-meta cm dir-path #(get-attribute cm dir-path attr)))
+   (otel/with-span [s ["delete-metadata" {:attributes {"irods.path" dir-path}}]]
+     (delete-meta cm dir-path #(get-attribute cm dir-path attr))))
   ([cm dir-path attr val]
-    (delete-meta cm dir-path #(get-attribute-value cm dir-path attr val))))
+   (otel/with-span [s ["delete-metadata" {:attributes {"irods.path" dir-path}}]]
+     (delete-meta cm dir-path #(get-attribute-value cm dir-path attr val)))))
 
 (defn delete-avus
   [cm dir-path avu-maps & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths dir-path)
-  (let [ao (case (or known-type (object-type cm dir-path))
-                   :dir  (:collectionAO cm)
-                   :file (:dataObjectAO cm))]
-    (doseq [avu-map avu-maps]
-      (when (attr-value? cm dir-path (:attr avu-map) (:value avu-map))
-        (delete-avu ao dir-path (map2avu avu-map))))))
+  (otel/with-span [s ["delete-avus" {:attributes {"irods.path" dir-path}}]]
+    (validate-path-lengths dir-path)
+    (let [ao (case (or known-type (object-type cm dir-path))
+                     :dir  (:collectionAO cm)
+                     :file (:dataObjectAO cm))]
+      (doseq [avu-map avu-maps]
+        (when (attr-value? cm dir-path (:attr avu-map) (:value avu-map))
+          (delete-avu ao dir-path (map2avu avu-map)))))))
 
 (defn- ^QueryConditionOperators op->constant
   [op]
@@ -232,13 +243,16 @@
 
 (defn list-files-with-attr
   [{^IRODSGenQueryExecutor executor :executor} attr]
-  (let [query (build-file-attr-query attr)
-        rs    (.executeIRODSQueryAndCloseResult executor query 0)]
-    (map format-result (.getResults rs))))
+  (otel/with-span [s ["list-files-with-attr" {:attributes {"irods.attribute" attr}}]]
+    (let [query (build-file-attr-query attr)
+          rs    (.executeIRODSQueryAndCloseResult executor query 0)]
+      (map format-result (.getResults rs)))))
 
 (defn list-files-with-avu
   [{^IRODSGenQueryExecutor executor :executor} n op value]
-  (otel/with-span [s ["list-files-with-avu" {:attributes {"name" n "op" (name op) "value" (str value)}}]]
+  (otel/with-span [s ["list-files-with-avu" {:attributes {"irods.attribute" n
+                                                          "irods.operation" (name op)
+                                                          "irods.value" (str value)}}]]
     (let [query    (build-file-avu-query n op value)
           rs       (.executeIRODSQueryAndCloseResult executor query 0)]
       (map format-result (.getResults rs)))))
@@ -430,7 +444,7 @@
 
 (defn list-collections-with-attr-value
   [{^CollectionAO collection-ao :collectionAO} attr value]
-  (otel/with-span [s ["list-collections-with-attr-value" {:attributes {"attribute" attr "value" (str value)}}]]
+  (otel/with-span [s ["list-collections-with-attr-value" {:attributes {"irods.attribute" attr "irods.value" (str value)}}]]
     (let [query [(AVUQueryElement/instanceForValueQuery
                   AVUQueryElement$AVUQueryPart/VALUE
                   AVUQueryOperatorEnum/EQUAL
@@ -455,5 +469,5 @@
    Returns:
      It returns a sequence of collections and data object paths."
   [cm attr value]
-  (otel/with-span [s ["list-everything-with-attr-value" {:attributes {"attribute" attr "value" (str value)}}]]
+  (otel/with-span [s ["list-everything-with-attr-value" {:attributes {"irods.attribute" attr "irods.value" (str value)}}]]
     (concat (list-collections-with-attr-value cm attr value) (list-files-with-avu cm attr := value))))
