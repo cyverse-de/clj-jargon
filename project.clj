@@ -1,4 +1,4 @@
-(defproject org.cyverse/clj-jargon "3.0.3"
+(defproject org.cyverse/clj-jargon "3.0.4-SNAPSHOT"
   :description "Clojure API on top of iRODS's jargon-core."
   :url "https://github.com/cyverse-de/clj-jargon"
   :license {:name "BSD"
