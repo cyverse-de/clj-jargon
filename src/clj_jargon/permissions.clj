@@ -589,11 +589,13 @@
 
 (defn fix-perms
   [cm ^IRODSFile src ^IRODSFile dst user admin-users skip-source-perms?]
-  (let [src-dir       (ft/dirname src)
-        dst-dir       (ft/dirname dst)]
-    (when-not (= src-dir dst-dir)
-      ((get-in perm-fix-fns (mapv #(permissions-inherited? cm %) [src-dir dst-dir]))
-       cm (.getPath src) (.getPath dst) user admin-users skip-source-perms?))))
+  (otel/with-span [s ["fix-perms" {:attributes {"irods.source-path"      (.getPath src)
+                                                "irods.destination-path" (.getPath dst)}}]]
+    (let [src-dir       (ft/dirname src)
+          dst-dir       (ft/dirname dst)]
+      (when-not (= src-dir dst-dir)
+        ((get-in perm-fix-fns (mapv #(permissions-inherited? cm %) [src-dir dst-dir]))
+         cm (.getPath src) (.getPath dst) user admin-users skip-source-perms?)))))
 
 (defn permissions
   [cm user fpath & {:keys [known-type] :or {known-type nil}}]
