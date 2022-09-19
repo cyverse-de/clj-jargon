@@ -55,3 +55,11 @@
   (cond (not (= (.getUserName irodsAccount) (.getProxyName irodsAccount))) true
         (not (= (.getZone irodsAccount) (.getProxyZone irodsAccount))) true
         :else false))
+
+(defn create-user-group
+  "Create a new user group named `group-name` in the logged-in user zone"
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name]
+  (let [group (doto (new UserGroup)
+                (.setUserGroupName group-name)
+                (.setZone zone))]
+      (.addUserGroup ug-ao group)))
