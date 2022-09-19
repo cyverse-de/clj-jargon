@@ -63,3 +63,8 @@
                 (.setUserGroupName group-name)
                 (.setZone zone))]
       (.addUserGroup ug-ao group)))
+
+(defn add-to-group
+  "Add a user `username` to the group `group-name`"
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} username group-name]
+  (.addUserToGroup ug-ao group-name username zone))
