@@ -56,6 +56,12 @@
         (not (= (.getZone irodsAccount) (.getProxyZone irodsAccount))) true
         :else false))
 
+(defn list-group-members
+  "List members of a group named `group-name` (qualified usernames)"
+  [{^UserGroupAO ug-ao :userGroupAO} group-name]
+  (map #(.getNameWithZone %)
+       (.listUserGroupMembers ug-ao group-name)))
+
 (defn create-user-group
   "Create a new user group named `group-name` in the logged-in user zone"
   [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name]
@@ -64,7 +70,20 @@
                 (.setZone zone))]
       (.addUserGroup ug-ao group)))
 
+(defn delete-user-group
+  "Delete a group named `group-name` in the logged-in user zone"
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name]
+  (let [group (doto (new UserGroup)
+                (.setUserGroupName group-name)
+                (.setZone zone))]
+      (.removeUserGroup ug-ao group)))
+
 (defn add-to-group
   "Add a user `username` to the group `group-name`"
   [{^UserGroupAO ug-ao :userGroupAO zone :zone} username group-name]
   (.addUserToGroup ug-ao group-name username zone))
+
+(defn remove-from-group
+  "Remove a user `username` from the group `group-name`"
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} username group-name]
+  (.removeUserFromGroup ug-ao group-name username zone))
