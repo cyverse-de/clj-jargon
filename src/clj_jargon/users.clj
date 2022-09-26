@@ -80,10 +80,10 @@
 
 (defn add-to-group
   "Add a user `username` to the group `group-name`"
-  [{^UserGroupAO ug-ao :userGroupAO zone :zone} username group-name]
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name username]
   (.addUserToGroup ug-ao group-name username zone))
 
 (defn remove-from-group
   "Remove a user `username` from the group `group-name`"
-  [{^UserGroupAO ug-ao :userGroupAO zone :zone} username group-name]
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name username]
   (.removeUserFromGroup ug-ao group-name username zone))
