@@ -56,6 +56,12 @@
         (not (= (.getZone irodsAccount) (.getProxyZone irodsAccount))) true
         :else false))
 
+(defn group-exists?
+  [{^UserGroupAO ug-ao :userGroupAO} group-name]
+  (-> (.findByName ug-ao group-name)
+      nil?
+      not))
+
 (defn list-group-members
   "List members of a group named `group-name` (qualified usernames)"
   [{^UserGroupAO ug-ao :userGroupAO} group-name]
