@@ -9,13 +9,21 @@
                                       UserAO]
            [org.irods.jargon.core.pub.domain UserGroup]))
 
+(def ^:private user-type-mapping
+  {"rodsuser"   :user
+   "groupadmin" :group-admin
+   "rodsadmin"  :admin
+   "rodsgroup"  :group
+   "unknown"    :unknown
+   })
+
 (defn user
   [{^UserAO user-ao :userAO} username]
   (otel/with-span [s ["user" {:attributes {"irods.user" username}}]]
     (try
       (let [jargon-user (.findByName user-ao username)]
         {:id (.getId jargon-user)
-         :type :user ;; better if we use the UserTypeEnum for rodsuser/groupadmin/rodsadmin/rodsgroup/unknown
+         :type (get user-type-mapping (.getTextValue (.getUserType jargon-user)) :unknown)
          :name (.getName jargon-user)
          :zone (.getZone jargon-user)
          :info (.getInfo jargon-user)
