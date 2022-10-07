@@ -9,13 +9,21 @@
                                       UserAO]
            [org.irods.jargon.core.pub.domain UserGroup]))
 
+(def ^:private user-type-mapping
+  {"rodsuser"   :user
+   "groupadmin" :group-admin
+   "rodsadmin"  :admin
+   "rodsgroup"  :group
+   "unknown"    :unknown
+   })
+
 (defn user
   [{^UserAO user-ao :userAO} username]
   (otel/with-span [s ["user" {:attributes {"irods.user" username}}]]
     (try
       (let [jargon-user (.findByName user-ao username)]
         {:id (.getId jargon-user)
-         :type :user ;; better if we use the UserTypeEnum for rodsuser/groupadmin/rodsadmin/rodsgroup/unknown
+         :type (get user-type-mapping (.getTextValue (.getUserType jargon-user)) :unknown)
          :name (.getName jargon-user)
          :zone (.getZone jargon-user)
          :info (.getInfo jargon-user)
@@ -55,3 +63,41 @@
   (cond (not (= (.getUserName irodsAccount) (.getProxyName irodsAccount))) true
         (not (= (.getZone irodsAccount) (.getProxyZone irodsAccount))) true
         :else false))
+
+(defn group-exists?
+  [{^UserGroupAO ug-ao :userGroupAO} group-name]
+  (-> (.findByName ug-ao group-name)
+      nil?
+      not))
+
+(defn list-group-members
+  "List members of a group named `group-name` (qualified usernames)"
+  [{^UserGroupAO ug-ao :userGroupAO} group-name]
+  (map #(.getNameWithZone %)
+       (.listUserGroupMembers ug-ao group-name)))
+
+(defn create-user-group
+  "Create a new user group named `group-name` in the logged-in user zone"
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name]
+  (let [group (doto (new UserGroup)
+                (.setUserGroupName group-name)
+                (.setZone zone))]
+      (.addUserGroup ug-ao group)))
+
+(defn delete-user-group
+  "Delete a group named `group-name` in the logged-in user zone"
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name]
+  (let [group (doto (new UserGroup)
+                (.setUserGroupName group-name)
+                (.setZone zone))]
+      (.removeUserGroup ug-ao group)))
+
+(defn add-to-group
+  "Add a user `username` to the group `group-name`"
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name username]
+  (.addUserToGroup ug-ao group-name username zone))
+
+(defn remove-from-group
+  "Remove a user `username` from the group `group-name`"
+  [{^UserGroupAO ug-ao :userGroupAO zone :zone} group-name username]
+  (.removeUserFromGroup ug-ao group-name username zone))
