@@ -7,7 +7,7 @@
            [org.irods.jargon.core.query RodsGenQueryEnum]
            [org.irods.jargon.core.pub UserGroupAO
                                       UserAO]
-           [org.irods.jargon.core.pub.domain UserGroup]))
+           [org.irods.jargon.core.pub.domain User UserGroup]))
 
 (def ^:private user-type-mapping
   {"rodsuser"   :user
@@ -64,6 +64,15 @@
         (not (= (.getZone irodsAccount) (.getProxyZone irodsAccount))) true
         :else false))
 
+(defn list-groups
+  "List groups (qualified usernames), using an optional search (postgresql/iquest LIKE format)"
+  ([{^UserGroupAO ug-ao :userGroupAO}]
+   (for [^UserGroup ug (.findAll ug-ao)]
+     (str (.getUserGroupName ug) "#" (.getZone ug))))
+  ([{^UserGroupAO ug-ao :userGroupAO} search]
+   (for [^UserGroup ug (.findWhere ug-ao search)]
+     (str (.getUserGroupName ug) "#" (.getZone ug)))))
+
 (defn group-exists?
   [{^UserGroupAO ug-ao :userGroupAO} group-name]
   (-> (.findByName ug-ao group-name)
@@ -73,8 +82,8 @@
 (defn list-group-members
   "List members of a group named `group-name` (qualified usernames)"
   [{^UserGroupAO ug-ao :userGroupAO} group-name]
-  (map #(.getNameWithZone %)
-       (.listUserGroupMembers ug-ao group-name)))
+  (for [^User u (.listUserGroupMembers ug-ao group-name)]
+    (.getNameWithZone u)))
 
 (defn create-user-group
   "Create a new user group named `group-name` in the logged-in user zone"
