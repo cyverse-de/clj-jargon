@@ -21,16 +21,18 @@
 
 
 (defn ^String trash-base-dir
-  "Returns the base trash folder for a specified user.
+  "Returns the base trash folder for all users or for a specified user.
 
    Parameters:
-     zone - he name of the authenication zone
-     user - the username of the user's trash folder to look up.
+     zone - the name of the authentication zone
+     user - (optional) the username of the user's trash folder to look up.
 
    Returns:
      It returns the absolute path to the trash folder."
-  [^String zone ^String user]
-  (ft/path-join "/" zone "trash" "home" user))
+  ([^String zone]
+   (ft/path-join "/" zone "trash" "home"))
+  ([^String zone ^String user]
+   (ft/path-join (trash-base-dir zone) user)))
 
 
 (defn ^IRODSFile file
