@@ -4,7 +4,7 @@
         [clj-jargon.cart :only [temp-password]]
         [clj-jargon.item-info :only [file object-type]]
         [clj-jargon.item-ops :only [input-stream tcb]])
-  (:require [clojure-commons.file-utils :as ft]
+  (:require [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure-commons.error-codes :refer [ERR_NOT_WRITEABLE]]
             [slingshot.slingshot :refer [throw+]])
@@ -12,9 +12,9 @@
            [org.irods.jargon.core.exception CatNoAccessException]
            [org.irods.jargon.core.pub IRODSAccessObjectFactory]
            [org.irods.jargon.core.connection IRODSAccount]
-           [org.irods.jargon.ticket.packinstr TicketInp] 
-           [org.irods.jargon.ticket.packinstr TicketCreateModeEnum] 
-           [org.irods.jargon.ticket TicketServiceFactoryImpl
+           [org.irods.jargon.ticket.packinstr TicketInp]
+           [org.irods.jargon.ticket.packinstr TicketCreateModeEnum]
+           [org.irods.jargon.ticket TicketServiceFactory
                                     TicketAdminService
                                     TicketAdminServiceImpl
                                     TicketClientSupport
@@ -39,8 +39,8 @@
    access to utility methods for performing operations on tickets.
    Probably doesn't need to be called directly."
   [cm username]
-  (let [tsf (:ticketServiceFactory cm)
-        user (account-for-ticket cm username)]
+  (let [^TicketServiceFactory tsf (:ticketServiceFactory cm)
+        ^IRODSAccount user        (account-for-ticket cm username)]
     (.instanceTicketAdminService tsf user)))
 
 (defn- ^TicketClientOperations ticket-client-operations
@@ -50,8 +50,8 @@
   ([cm]
    (ticket-client-operations cm (:username cm)))
   ([cm username]
-   (let [tsf (:ticketServiceFactory cm)
-         user (account-for-ticket cm username)]
+   (let [^TicketServiceFactory tsf (:ticketServiceFactory cm)
+         ^IRODSAccount user        (account-for-ticket cm username)]
      (.instanceTicketClientOperations tsf user))))
 
 (defn set-ticket-options
@@ -164,7 +164,7 @@
   ([cm ticket-id remote-path local-path tcl control-block]
     (let [tco (ticket-client-operations cm)
           sourceFile (file cm remote-path)
-          localFile (File. local-path)]
+          localFile (io/file local-path)]
       (.getOperationFromIRODSUsingTicket tco ticket-id sourceFile localFile tcl control-block))))
 
 (defn iput
@@ -176,7 +176,7 @@
     (try
       (let [tco (ticket-client-operations cm)
             targetFile (file cm remote-path)
-            localFile (File. local-path)]
+            localFile (io/file local-path)]
         (.putFileToIRODSUsingTicket tco ticket-id localFile targetFile tcl control-block))
       (catch CatNoAccessException _
         (throw+ {:error_code ERR_NOT_WRITEABLE :path remote-path})))))

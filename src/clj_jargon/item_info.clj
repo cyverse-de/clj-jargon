@@ -109,14 +109,11 @@
    Returns:
      It returns true if the path points to a linked directory, otherwise it
      returns false."
-  [{^IRODSFileFactory file-factory :fileFactory} ^String path]
+  [{^IRODSFileSystemAO cm-ao :fileSystemAO} ^String path]
   (otel/with-span [s ["is-linked-dir?" {:attributes {"irods.path" path}}]]
     (validate-path-lengths path)
     (= ObjStat$SpecColType/LINKED_COLL
-       (.. file-factory
-         (instanceIRODSFile (ft/rm-last-slash path))
-         initializeObjStatForFile
-         getSpecColType))))
+       (.getSpecColType (.getObjStat cm-ao path)))))
 
 (defn ^DataObject data-object
   "Returns an instance of DataObject representing 'path'."

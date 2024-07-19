@@ -1,6 +1,7 @@
 (ns clj-jargon.gen-query
   (:require [clojure.string :as string])
-  (:import [org.irods.jargon.core.query IRODSGenQuery]
+  (:import [java.util List]
+           [org.irods.jargon.core.query IRODSGenQuery]
            [org.irods.jargon.core.query RodsGenQueryEnum]
            [org.irods.jargon.core.query IRODSQueryResultRow]
            [org.irods.jargon.core.pub IRODSGenQueryExecutor]))
@@ -32,7 +33,7 @@
   [cols]
   (into-array (mapv column-xformer cols)))
 
-(defn execute-gen-query
+(defn ^List execute-gen-query
   [{^IRODSGenQueryExecutor executor :executor} sql cols]
   (.getResults
    (.executeIRODSQueryAndCloseResult

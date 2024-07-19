@@ -41,7 +41,7 @@
 (defn overwrite-at-position
   [cm filepath position update]
   (let [access-file  (random-access-file cm filepath)
-        ^bytes update-bytes (.getBytes update)
+        ^bytes update-bytes (.getBytes ^String update)
         read-buffer  (byte-array (count update-bytes))]
     (doto access-file
       (.seek position SEEK-CURRENT)

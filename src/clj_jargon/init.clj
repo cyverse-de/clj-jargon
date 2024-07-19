@@ -19,8 +19,8 @@
 (defn clean-return
   [cm retval]
   (log/debug curr-with-jargon-index "- cleaning up and returning a plain value")
-  (when (and (delay? cm) (realized? cm)) (.close (:proxy @cm)))
-  (when-not (delay? cm) (.close (:proxy cm)))
+  (when (and (delay? cm) (realized? cm)) (.close ^IRODSFileSystem (:proxy @cm)))
+  (when-not (delay? cm) (.close ^IRODSFileSystem (:proxy cm)))
   retval)
 
 (defn dirty-return
@@ -45,7 +45,7 @@
       (close []
         (log/debug with-jargon-index "- closing the proxy input stream")
         (.close istream)
-        (.close cm-proxy)))))
+        (.close ^IRODSFileSystem cm-proxy)))))
 
 (defn proxy-input-stream-return
   [cm retval]
@@ -146,7 +146,7 @@
           retry? (:retry retval)]
       (cond
         (and error? retry? (< num-tries (:max-retries cfg)))
-        (do (Thread/sleep (:retry-sleep cfg))
+        (do (Thread/sleep ^Long (:retry-sleep cfg))
             (recur (inc num-tries)))
 
         error?
