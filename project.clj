@@ -1,4 +1,4 @@
-(defproject org.cyverse/clj-jargon "3.1.1-SNAPSHOT"
+(defproject org.cyverse/clj-jargon "3.1.1"
   :description "Clojure API on top of iRODS's jargon-core."
   :url "https://github.com/cyverse-de/clj-jargon"
   :license {:name "BSD"
@@ -24,7 +24,7 @@
                  [medley "1.4.0"]
                  [slingshot "0.12.2"]
                  [org.cyverse/otel "0.2.6"]
-                 [org.cyverse/clojure-commons "3.0.8-SNAPSHOT"]]
+                 [org.cyverse/clojure-commons "3.0.8"]]
   :profiles {:repl {:source-paths ["repl"]}}
   :eastwood {:exclude-linters [:unlimited-use :non-dynamic-earmuffs]}
   :repositories [["cyverse-de"
