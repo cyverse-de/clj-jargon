@@ -140,9 +140,8 @@
     (PackingIrodsInputStream.
      (.instanceIRODSFileInputStream file-factory (info/file cm input-path)))))
 
-
 (defn read-file
-  [{^IRODSFileFactory file-factory :fileFactory :as cm} fpath buffer]
+  [{^IRODSFileFactory file-factory :fileFactory :as cm} fpath #^chars buffer]
   (validate-path-lengths fpath)
   (otel/with-span [s ["read-file" {:attributes {"irods.path" fpath}}]]
     (.read (IRODSFileReader. (info/file cm fpath) file-factory) buffer)))

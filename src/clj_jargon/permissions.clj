@@ -15,6 +15,7 @@
                                       DataObjectAO
                                       CollectionAO
                                       CollectionAndDataObjectListAndSearchAO]
+           [org.irods.jargon.core.pub.domain UserFilePermission]
            [org.irods.jargon.core.pub.io IRODSFile]
            [org.irods.jargon.core.query IRODSQueryResultRow
                                         RodsGenQueryEnum
@@ -182,7 +183,7 @@
   data-path"
   [cm user-id data-path perm]
   (let [results (dataobject-perms-rs cm user-id data-path)]
-    (some #(get (perm-map-for (first (.getColumnsAsList %))) perm) results)))
+    (some #(get (perm-map-for (first (.getColumnsAsList ^IRODSQueryResultRow %))) perm) results)))
 
 (defn- dataobject-perm?
   "Utility function that checks to see of the user has the specified
@@ -218,7 +219,7 @@
   coll-path"
   [cm user coll-path perm]
   (let [results (collection-perms-rs cm user coll-path)]
-    (some #(get (perm-map-for (first (.getColumnsAsList %))) perm) results)))
+    (some #(get (perm-map-for (first (.getColumnsAsList ^IRODSQueryResultRow %))) perm) results)))
 
 (defn- collection-perm?
   "Utility function that checks to see if the user has the specified
@@ -361,8 +362,10 @@
 
 (defn one-user-to-rule-them-all?
   [{^CollectionAndDataObjectListAndSearchAO lister :lister :as cm} user]
-  (let [subdirs     (.listCollectionsUnderPathWithPermissions lister (ft/rm-last-slash (:home cm)) 0)
-        accessible? (fn [u ^CollectionAndDataObjectListingEntry d] (some #(= (.getUserName %) u) (.getUserFilePermission d)))]
+  (let [subdirs      (.listCollectionsUnderPathWithPermissions lister (ft/rm-last-slash (:home cm)) 0)
+        get-perms    (fn [^CollectionAndDataObjectListingEntry d] (.getUserFilePermission d))
+        get-username (fn [^UserFilePermission u] (.getUserName u))
+        accessible?  (fn [u d] (some #(= (get-username %) u) (get-perms d)))]
     (every? (partial accessible? user) subdirs)))
 
 (defn set-owner
