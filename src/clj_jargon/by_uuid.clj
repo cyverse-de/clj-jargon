@@ -3,8 +3,7 @@
             [clojure.tools.logging :as log]
             [slingshot.slingshot :refer [throw+]]
             [clojure-commons.error-codes :as error]
-            [clj-jargon.metadata :as meta]
-            [otel.otel :as otel])
+            [clj-jargon.metadata :as meta])
   (:import [clojure.lang IPersistentMap IPersistentVector]
            [java.util UUID]
            [org.irods.jargon.core.pub IRODSGenQueryExecutor]
@@ -85,12 +84,11 @@
    in the data store. If the same UUID ever becomes associated with multiple entities, whichever entity is found last
    will be included in the results."
   [{^IRODSGenQueryExecutor executor :executor} uuids]
-  (otel/with-span [s ["get-paths" {:attributes {"uuids" (str uuids)}}]]
-    (let [partitions (partition-all 500 uuids)
-          get-values (fn [^IRODSQueryResultRow row] (.getColumnsAsList row))
-          format     (juxt first (comp (partial string/join "/") rest))
-          run-query  (fn [build-query uuids]
-                       (mapv (comp format get-values)
-                             (.getResults (.executeIRODSQueryAndCloseResult executor (build-query uuids) 0))))]
-      (into {} (concat (mapcat (partial run-query build-collection-uuid-query) partitions)
-                       (mapcat (partial run-query build-file-uuid-query) partitions))))))
+  (let [partitions (partition-all 500 uuids)
+        get-values (fn [^IRODSQueryResultRow row] (.getColumnsAsList row))
+        format     (juxt first (comp (partial string/join "/") rest))
+        run-query  (fn [build-query uuids]
+                     (mapv (comp format get-values)
+                           (.getResults (.executeIRODSQueryAndCloseResult executor (build-query uuids) 0))))]
+    (into {} (concat (mapcat (partial run-query build-collection-uuid-query) partitions)
+                     (mapcat (partial run-query build-file-uuid-query) partitions)))))

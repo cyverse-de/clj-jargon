@@ -23,7 +23,6 @@
                  [cheshire "5.13.0"]
                  [medley "1.4.0"]
                  [slingshot "0.12.2"]
-                 [org.cyverse/otel "0.2.6"]
                  [org.cyverse/clojure-commons "3.0.9"]]
   :profiles {:repl {:source-paths ["repl"]}}
   :eastwood {:exclude-linters [:unlimited-use :non-dynamic-earmuffs]}
