@@ -143,7 +143,7 @@
 (defn stat
   "Returns status information for a path."
   [{^IRODSFileSystemAO cm-ao :fileSystemAO} ^String path]
-      (validate-path-lengths path)
+  (validate-path-lengths path)
   (try
       (let [objstat (.getObjStat cm-ao path)]
         (condp = (.getObjectType objstat)
