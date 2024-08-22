@@ -4,7 +4,6 @@
         [clj-jargon.users]
         [slingshot.slingshot :only [try+ throw+]])
   (:require [clojure-commons.file-utils :as ft]
-            [otel.otel :as otel]
             [clj-jargon.lazy-listings :as ll]
             [clojure.tools.logging :as log]
             [clojure.string :as string]
@@ -74,29 +73,27 @@
 
 (defn collection-perms-rs
   [cm user coll-path]
-  (otel/with-span [s ["collection-perms-rs" {:attributes {"irods.user" user
-                                                          "irods.path" coll-path}}]]
-    (execute-gen-query cm
-     "select %s where %s = '%s' and %s = '%s'"
-     [RodsGenQueryEnum/COL_COLL_ACCESS_TYPE
-      RodsGenQueryEnum/COL_COLL_NAME
-      coll-path
-      RodsGenQueryEnum/COL_COLL_ACCESS_USER_NAME
-      user])))
+  (execute-gen-query
+   cm
+   "select %s where %s = '%s' and %s = '%s'"
+   [RodsGenQueryEnum/COL_COLL_ACCESS_TYPE
+    RodsGenQueryEnum/COL_COLL_NAME
+    coll-path
+    RodsGenQueryEnum/COL_COLL_ACCESS_USER_NAME
+    user]))
 
 (defn dataobject-perms-rs
   [cm user-id data-path]
-  (otel/with-span [s ["dataobject-perms-rs" {:attributes {"irods.user-id" user-id
-                                                          "irods.path"    data-path}}]]
-    (execute-gen-query cm
-     "select %s where %s = '%s' and %s = '%s' and %s = '%s'"
-     [RodsGenQueryEnum/COL_DATA_ACCESS_TYPE
-      RodsGenQueryEnum/COL_COLL_NAME
-      (ft/dirname data-path)
-      RodsGenQueryEnum/COL_DATA_NAME
-      (ft/basename data-path)
-      RodsGenQueryEnum/COL_DATA_ACCESS_USER_ID
-      user-id])))
+  (execute-gen-query
+   cm
+   "select %s where %s = '%s' and %s = '%s' and %s = '%s'"
+   [RodsGenQueryEnum/COL_DATA_ACCESS_TYPE
+    RodsGenQueryEnum/COL_COLL_NAME
+    (ft/dirname data-path)
+    RodsGenQueryEnum/COL_DATA_NAME
+    (ft/basename data-path)
+    RodsGenQueryEnum/COL_DATA_ACCESS_USER_ID
+    user-id]))
 
 (defn perm-map-for
   [perms-code]
@@ -112,15 +109,13 @@
 
 (defn- user-collection-perms*
   [cm user coll-path escape-hatch]
-  (otel/with-span [s ["user-collection-perms*" {:attributes {"irods.path" coll-path
-                                                             "irods.user" user}}]]
-    (validate-path-lengths coll-path)
-    (->> (concat [user] (lazy-seq (user-groups cm user)))
-         (mcat #(collection-perms-rs cm % coll-path))
-         (map (fn [^IRODSQueryResultRow rs] (.getColumnsAsList rs)))
-         (map #(FilePermissionEnum/valueOf (Integer/parseInt (first %))))
-         (take-upto escape-hatch)
-         (doall))))
+  (validate-path-lengths coll-path)
+  (->> (concat [user] (lazy-seq (user-groups cm user)))
+       (mcat #(collection-perms-rs cm % coll-path))
+       (map (fn [^IRODSQueryResultRow rs] (.getColumnsAsList rs)))
+       (map #(FilePermissionEnum/valueOf (Integer/parseInt (first %))))
+       (take-upto escape-hatch)
+       (doall)))
 
 (defn- user-collection-perms
   [cm user coll-path]
@@ -129,15 +124,13 @@
 
 (defn- user-dataobject-perms*
   [cm user data-path escape-hatch]
-  (otel/with-span [s ["user-dataobject-perms*" {:attributes {"irods.path" data-path
-                                                             "irods.user" user}}]]
-    (validate-path-lengths data-path)
-    (->> (concat [(username->id cm user)] (lazy-seq (user-group-ids cm user)))
-         (mcat #(dataobject-perms-rs cm % data-path))
-         (map (fn [^IRODSQueryResultRow rs] (.getColumnsAsList rs)))
-         (map #(FilePermissionEnum/valueOf (Integer/parseInt (first %))))
-         (take-upto escape-hatch)
-         (doall))))
+  (validate-path-lengths data-path)
+  (->> (concat [(username->id cm user)] (lazy-seq (user-group-ids cm user)))
+       (mcat #(dataobject-perms-rs cm % data-path))
+       (map (fn [^IRODSQueryResultRow rs] (.getColumnsAsList rs)))
+       (map #(FilePermissionEnum/valueOf (Integer/parseInt (first %))))
+       (take-upto escape-hatch)
+       (doall)))
 
 (defn- user-dataobject-perms
   [cm user data-path]
@@ -379,12 +372,11 @@
     ^CollectionAO collection-ao :collectionAO
     zone :zone
     :as cm} path owner & {:keys [known-type] :or {known-type nil}}]
-  (otel/with-span [s ["set-owner" {:attributes {"irods.path" path}}]]
-    (validate-path-lengths path)
-    (case (or known-type (item/object-type cm path))
-     :file (.setAccessPermissionOwn data-ao zone path owner)
+  (validate-path-lengths path)
+  (case (or known-type (item/object-type cm path))
+    :file (.setAccessPermissionOwn data-ao zone path owner)
 
-     :dir  (.setAccessPermissionOwn collection-ao zone path owner true))))
+    :dir  (.setAccessPermissionOwn collection-ao zone path owner true)))
 
 (defn set-inherits
   "Sets the inheritance attribute of a collection to true (recursively).
@@ -591,13 +583,11 @@
 
 (defn fix-perms
   [cm ^IRODSFile src ^IRODSFile dst user admin-users skip-source-perms?]
-  (otel/with-span [s ["fix-perms" {:attributes {"irods.source-path"      (.getPath src)
-                                                "irods.destination-path" (.getPath dst)}}]]
-    (let [src-dir       (ft/dirname src)
-          dst-dir       (ft/dirname dst)]
-      (when-not (= src-dir dst-dir)
-        ((get-in perm-fix-fns (mapv #(permissions-inherited? cm %) [src-dir dst-dir]))
-         cm (.getPath src) (.getPath dst) user admin-users skip-source-perms?)))))
+  (let [src-dir       (ft/dirname src)
+        dst-dir       (ft/dirname dst)]
+    (when-not (= src-dir dst-dir)
+      ((get-in perm-fix-fns (mapv #(permissions-inherited? cm %) [src-dir dst-dir]))
+       cm (.getPath src) (.getPath dst) user admin-users skip-source-perms?))))
 
 (defn permissions
   [cm user fpath & {:keys [known-type] :or {known-type nil}}]
