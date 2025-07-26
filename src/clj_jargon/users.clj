@@ -58,6 +58,15 @@
         (not (= (.getZone irodsAccount) (.getProxyZone irodsAccount))) true
         :else false))
 
+(defn list-groups
+  "List groups (qualified usernames), using an optional search string"
+  ([{^UserGroupAO ug-ao :userGroupAO}]
+   (for [^UserGroup ug (.findAll ug-ao)]
+     (str (.getUserGroupName ug) "#" (.getZone ug))))
+  ([{^UserGroupAO ug-ao :userGroupAO} search & {:keys [case-insensitive?] :or {case-insensitive? false}}]
+   (for [^UserGroup ug (.findWhere ug-ao search case-insensitive?)]
+     (str (.getUserGroupName ug) "#" (.getZone ug)))))
+
 (defn group-exists?
   [{^UserGroupAO ug-ao :userGroupAO} group-name]
   (-> (.findByName ug-ao group-name)
