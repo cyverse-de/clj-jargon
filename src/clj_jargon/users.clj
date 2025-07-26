@@ -64,7 +64,7 @@
    (for [^UserGroup ug (.findAll ug-ao)]
      (str (.getUserGroupName ug) "#" (.getZone ug))))
   ([{^UserGroupAO ug-ao :userGroupAO} search & {:keys [case-insensitive?] :or {case-insensitive? false}}]
-   (for [^UserGroup ug (.findWhere ug-ao search case-insensitive?)]
+   (for [^UserGroup ug (.findUserGroups ug-ao search case-insensitive?)]
      (str (.getUserGroupName ug) "#" (.getZone ug)))))
 
 (defn group-exists?
