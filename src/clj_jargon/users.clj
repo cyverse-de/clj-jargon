@@ -58,15 +58,6 @@
         (not (= (.getZone irodsAccount) (.getProxyZone irodsAccount))) true
         :else false))
 
-(defn list-groups
-  "List groups (qualified usernames), using an optional search (postgresql/iquest LIKE format)"
-  ([{^UserGroupAO ug-ao :userGroupAO}]
-   (for [^UserGroup ug (.findAll ug-ao)]
-     (str (.getUserGroupName ug) "#" (.getZone ug))))
-  ([{^UserGroupAO ug-ao :userGroupAO} search]
-   (for [^UserGroup ug (.findWhere ug-ao search)]
-     (str (.getUserGroupName ug) "#" (.getZone ug)))))
-
 (defn group-exists?
   [{^UserGroupAO ug-ao :userGroupAO} group-name]
   (-> (.findByName ug-ao group-name)
