@@ -1,23 +1,20 @@
 (ns clj-jargon.metadata
-  (:use [clj-jargon.validations]
-        [clj-jargon.item-info :only [object-type]])
-  (:require [clojure.string :as string]
-            [slingshot.slingshot :refer [throw+ try+]]
-            [clojure-commons.error-codes :refer [ERR_NOT_WRITEABLE]])
+  (:require [clj-jargon.item-info :refer [object-type]]
+            [clj-jargon.validations :as v]
+            [clojure-commons.error-codes :refer [ERR_NOT_WRITEABLE]]
+            [clojure.string :as string]
+            [slingshot.slingshot :refer [throw+ try+]])
   (:import [org.irods.jargon.core.exception CatNoAccessException]
-           [org.irods.jargon.core.pub DataObjectAO
-                                      CollectionAO
-                                      IRODSGenQueryExecutor]
-           [org.irods.jargon.core.pub.domain AvuData
-                                             Collection]
-           [org.irods.jargon.core.query IRODSGenQueryBuilder
-                                        IRODSQueryResultRow
-                                        QueryConditionOperators
-                                        RodsGenQueryEnum
-                                        AVUQueryElement
+           [org.irods.jargon.core.pub CollectionAO DataObjectAO IRODSGenQueryExecutor]
+           [org.irods.jargon.core.pub.domain AvuData Collection]
+           [org.irods.jargon.core.query AVUQueryElement
                                         AVUQueryElement$AVUQueryPart
-                                        AVUQueryOperatorEnum
-                                        MetaDataAndDomainData]))
+                                        IRODSGenQueryBuilder
+                                        IRODSQueryResultRow
+                                        MetaDataAndDomainData
+                                        QueryConditionOperators
+                                        QueryConditionOperators
+                                        RodsGenQueryEnum]))
 
 (def max-gen-query-results 50000)
 
@@ -38,7 +35,7 @@
     ^CollectionAO collection-ao :collectionAO
     :as cm}
    ^String path & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths path)
+  (v/validate-path-lengths path)
   (mapv avu2map
         (case (or known-type (object-type cm path))
           :dir  (.findMetadataValuesForCollection collection-ao path)
@@ -48,7 +45,7 @@
   [{^DataObjectAO data-ao :dataObjectAO
     ^CollectionAO collection-ao :collectionAO
     :as cm} path query & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths path)
+  (v/validate-path-lengths path)
   (mapv avu2map
         (case (or known-type (object-type cm path))
           :dir  (.findMetadataValuesByMetadataQueryForCollection collection-ao query path)
@@ -61,7 +58,7 @@
     :as cm} dir-path attr & {:keys [known-type] :or {known-type nil}}]
   (let [query [(AVUQueryElement/instanceForValueQuery
                 AVUQueryElement$AVUQueryPart/ATTRIBUTE
-                AVUQueryOperatorEnum/EQUAL
+                QueryConditionOperators/EQUAL
                 attr)]]
     (get-metadata-by-query cm dir-path query :known-type known-type)))
 
@@ -71,10 +68,10 @@
     :as cm} apath attr val & {:keys [known-type] :or {known-type nil}}]
   (let [query [(AVUQueryElement/instanceForValueQuery
                 AVUQueryElement$AVUQueryPart/ATTRIBUTE
-                AVUQueryOperatorEnum/EQUAL
+                QueryConditionOperators/EQUAL
                 attr) (AVUQueryElement/instanceForValueQuery
                        AVUQueryElement$AVUQueryPart/VALUE
-                       AVUQueryOperatorEnum/EQUAL
+                       QueryConditionOperators/EQUAL
                        (str val))]]
     (get-metadata-by-query cm apath query :known-type known-type)))
 
@@ -87,17 +84,17 @@
   "Returns a truthy value if path has metadata that has an attribute of attr and
    a value of val."
   ([cm path attr val & {:keys [known-type] :or {known-type nil}}]
-    (pos? (count (get-attribute-value cm path attr val :known-type known-type))))
+   (pos? (count (get-attribute-value cm path attr val :known-type known-type))))
   ([metadata attr val]
-    (-> (filter
-          #(and (= (:attr %1) attr)
-                (= (:value %1) val))
-          metadata)
-      count
-      pos?)))
+   (-> (filter
+        #(and (= (:attr %1) attr)
+              (= (:value %1) val))
+        metadata)
+       count
+       pos?)))
 
 (defmulti add-avu
-          (fn [ao-obj dir-path avu] (type ao-obj)))
+  (fn [ao-obj dir-path avu] (type ao-obj)))
 (defmethod add-avu CollectionAO
   [^CollectionAO ao-obj ^String dir-path ^AvuData avu]
   (.addAVUMetadata ao-obj dir-path avu))
@@ -106,7 +103,7 @@
   (.addAVUMetadata ao-obj dir-path avu))
 
 (defmulti modify-avu
-          (fn [ao-obj dir-path old-avu avu] (type ao-obj)))
+  (fn [ao-obj dir-path old-avu avu] (type ao-obj)))
 (defmethod modify-avu CollectionAO
   [^CollectionAO ao-obj ^String dir-path ^AvuData old-avu ^AvuData avu]
   (.modifyAVUMetadata ao-obj dir-path old-avu avu))
@@ -115,7 +112,7 @@
   (.modifyAVUMetadata ao-obj dir-path old-avu avu))
 
 (defmulti delete-avu
-          (fn [ao-obj dir-path avu] (type ao-obj)))
+  (fn [ao-obj dir-path avu] (type ao-obj)))
 (defmethod delete-avu CollectionAO
   [^CollectionAO ao-obj ^String dir-path ^AvuData avu]
   (.deleteAVUMetadata ao-obj dir-path avu))
@@ -125,7 +122,7 @@
 
 (defn add-metadata
   [cm dir-path attr value unit & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths dir-path)
+  (v/validate-path-lengths dir-path)
   (try+
    (let [ao-obj (case (or known-type (object-type cm dir-path))
                   :dir  (:collectionAO cm)
@@ -134,11 +131,10 @@
    (catch CatNoAccessException _
      (throw+ {:error_code ERR_NOT_WRITEABLE :path dir-path}))))
 
-
 (defn set-metadata
   "Sets an avu for dir-path."
   [cm dir-path attr value unit & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths dir-path)
+  (v/validate-path-lengths dir-path)
   (let [avu    (AvuData/instance attr value unit)
         ao-obj (case (or known-type (object-type cm dir-path))
                  :dir  (:collectionAO cm)
@@ -150,12 +146,12 @@
 
 (defn- delete-meta
   [cm dir-path attr-func & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths dir-path)
+  (v/validate-path-lengths dir-path)
   (let [fattr  (first (attr-func))
         avu    (map2avu fattr)
         ao-obj (case (or known-type (object-type cm dir-path))
-                   :dir  (:collectionAO cm)
-                   :file (:dataObjectAO cm))]
+                 :dir  (:collectionAO cm)
+                 :file (:dataObjectAO cm))]
     (delete-avu ao-obj dir-path avu)))
 
 (defn delete-metadata
@@ -166,7 +162,7 @@
 
 (defn delete-avus
   [cm dir-path avu-maps & {:keys [known-type] :or {known-type nil}}]
-  (validate-path-lengths dir-path)
+  (v/validate-path-lengths dir-path)
   (let [ao (case (or known-type (object-type cm dir-path))
              :dir  (:collectionAO cm)
              :file (:dataObjectAO cm))]
@@ -216,7 +212,6 @@
       (.addConditionAsGenQueryField RodsGenQueryEnum/COL_META_DATA_ATTR_NAME
                                     QueryConditionOperators/EQUAL name)
       (.exportIRODSQueryFromBuilder max-gen-query-results)))
-
 
 (defn- format-result
   [^IRODSQueryResultRow rr]
@@ -393,14 +388,14 @@
   [{^CollectionAO collection-ao :collectionAO} file-path attr units]
   (let [query [(AVUQueryElement/instanceForValueQuery
                 AVUQueryElement$AVUQueryPart/UNITS
-                AVUQueryOperatorEnum/EQUAL
+                QueryConditionOperators/EQUAL
                 units)
                (AVUQueryElement/instanceForValueQuery
                 AVUQueryElement$AVUQueryPart/ATTRIBUTE
-                AVUQueryOperatorEnum/EQUAL
+                QueryConditionOperators/EQUAL
                 attr)]]
     (mapv avu2map
-     (.findMetadataValuesByMetadataQueryForCollection collection-ao query file-path))))
+          (.findMetadataValuesByMetadataQueryForCollection collection-ao query file-path))))
 
 (defn- get-coll-name
   [^Collection coll]
@@ -410,28 +405,27 @@
   [{^CollectionAO collection-ao :collectionAO} attr units]
   (let [query [(AVUQueryElement/instanceForValueQuery
                 AVUQueryElement$AVUQueryPart/UNITS
-                AVUQueryOperatorEnum/EQUAL
+                QueryConditionOperators/EQUAL
                 units)
                (AVUQueryElement/instanceForValueQuery
                 AVUQueryElement$AVUQueryPart/ATTRIBUTE
-                AVUQueryOperatorEnum/EQUAL
+                QueryConditionOperators/EQUAL
                 attr)]]
     (mapv get-coll-name
-     (.findDomainByMetadataQuery collection-ao query))))
+          (.findDomainByMetadataQuery collection-ao query))))
 
 (defn list-collections-with-attr-value
   [{^CollectionAO collection-ao :collectionAO} attr value]
   (let [query [(AVUQueryElement/instanceForValueQuery
                 AVUQueryElement$AVUQueryPart/VALUE
-                AVUQueryOperatorEnum/EQUAL
+                QueryConditionOperators/EQUAL
                 (str value))
                (AVUQueryElement/instanceForValueQuery
                 AVUQueryElement$AVUQueryPart/ATTRIBUTE
-                AVUQueryOperatorEnum/EQUAL
+                QueryConditionOperators/EQUAL
                 attr)]]
     (mapv get-coll-name
           (.findDomainByMetadataQuery collection-ao query))))
-
 
 (defn list-everything-with-attr-value
   "Generates a sequence of all collections and data objects with a given attribute having a given
